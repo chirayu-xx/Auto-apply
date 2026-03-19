@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment
+.env
+
+# Build output
+dist/
+.next/
+
+# Uploads & generated files
+uploads/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+pgdata/
+redisdata/
+
+# Prisma
+prisma/migrations/
+
+# Logs
+*.log
+npm-debug.log*

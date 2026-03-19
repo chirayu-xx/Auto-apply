@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  name            String
+  phone           String?
+  location        String?
+  desiredRoles    String[]  @map("desired_roles")
+  experienceLevel String?   @map("experience_level")
+  salaryMin       Int?      @map("salary_min")
+  salaryMax       Int?      @map("salary_max")
+  workPreference  String?   @map("work_preference")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  resume        Resume?
+  jobPreference JobPreference?
+  applications  Application[]
+  answerBank    AnswerBank[]
+  jobScanTasks  JobScanTask[]
+
+  @@map("users")
+}
+
+model Resume {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  originalPdfUrl String   @map("original_pdf_url")
+  parsedContent  Json     @map("parsed_content")
+  skills         String[]
+  uploadedAt     DateTime @default(now()) @map("uploaded_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tailoredResumes TailoredResume[]
+
+  @@map("resumes")
+}
+
+model JobPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  targetRoles          String[] @map("target_roles")
+  targetLocations      String[] @map("target_locations")
+  remoteOnly           Boolean  @default(false) @map("remote_only")
+  minSalary            Int?     @map("min_salary")
+  autoApplyThreshold   Int      @default(75) @map("auto_apply_threshold")
+  blacklistedCompanies String[] @map("blacklisted_companies")
+  blacklistedKeywords  String[] @map("blacklisted_keywords")
+  scanFrequency        String   @default("12h") @map("scan_frequency")
+  isPaused             Boolean  @default(false) @map("is_paused")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("job_preferences")
+}
+
+model Job {
+  id              String    @id @default(uuid())
+  title           String
+  company         String
+  location        String?
+  jobType         String?   @map("job_type")
+  source          String    // linkedin, indeed, naukri, glassdoor
+  sourceUrl       String    @unique @map("source_url")
+  description     String
+  requiredSkills  String[]  @map("required_skills")
+  salaryRange     String?   @map("salary_range")
+  experienceLevel String?   @map("experience_level")
+  relevanceScore  Int?      @map("relevance_score")
+  isEasyApply     Boolean   @default(false) @map("is_easy_apply")
+  postedAt        DateTime? @map("posted_at")
+  scrapedAt       DateTime  @default(now()) @map("scraped_at")
+
+  tailoredResumes TailoredResume[]
+  applications    Application[]
+
+  @@map("jobs")
+}
+
+model TailoredResume {
+  id               String   @id @default(uuid())
+  resumeId         String   @map("resume_id")
+  jobId            String   @map("job_id")
+  tailoredPdfUrl   String?  @map("tailored_pdf_url")
+  tailoredContent  Json     @map("tailored_content")
+  matchScore       Int      @map("match_score")
+  highlightedSkills String[] @map("highlighted_skills")
+  coverLetter      String?  @map("cover_letter")
+  generatedAt      DateTime @default(now()) @map("generated_at")
+
+  resume      Resume      @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  job         Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  application Application?
+
+  @@map("tailored_resumes")
+}
+
+model Application {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  jobId            String    @map("job_id")
+  tailoredResumeId String?   @unique @map("tailored_resume_id")
+  status           String    @default("queued")
+  formData         Json?     @map("form_data")
+  appliedAt        DateTime? @map("applied_at")
+  lastStatusCheck  DateTime? @map("last_status_check")
+  errorLog         String?   @map("error_log")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job            Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tailoredResume TailoredResume? @relation(fields: [tailoredResumeId], references: [id])
+
+  @@unique([userId, jobId])
+  @@map("applications")
+}
+
+model AnswerBank {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  question String
+  answer   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, question])
+  @@map("answer_bank")
+}
+
+model JobScanTask {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  source      String
+  status      String    @default("pending")
+  jobsFound   Int       @default(0) @map("jobs_found")
+  jobsMatched Int       @default(0) @map("jobs_matched")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("job_scan_tasks")
+}
